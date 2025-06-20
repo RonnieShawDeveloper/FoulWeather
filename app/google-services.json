@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "297767957186",
+    "project_id": "jet-war-1544f",
+    "storage_bucket": "jet-war-1544f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:297767957186:android:9d5b4acb16327c7bc2015b",
+        "android_client_info": {
+          "package_name": "com.artificialinsightsllc.foulweather"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDOPdt5kpPnCuhGAeZ_FAsgRwb9PousPis"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:297767957186:android:bf5df79e4e2b5f45c2015b",
+        "android_client_info": {
+          "package_name": "com.artificialinsightsllc.yourgenius"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDOPdt5kpPnCuhGAeZ_FAsgRwb9PousPis"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:297767957186:android:316db359a04237f2c2015b",
+        "android_client_info": {
+          "package_name": "com.justicetech.jetwarmobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDOPdt5kpPnCuhGAeZ_FAsgRwb9PousPis"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

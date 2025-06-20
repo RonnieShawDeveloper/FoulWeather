@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Foul Weather</string>
+    <string name="default_notification_channel_id" translatable="false">foul_weather_channel_v2</string>
+    <string name="foul_weather_channel_name">Foul Weather Notifications</string>
+</resources>
