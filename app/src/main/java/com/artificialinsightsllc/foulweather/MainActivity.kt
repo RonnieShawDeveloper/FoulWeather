@@ -343,7 +343,9 @@ class MainActivity : ComponentActivity() {
                             intent?.let {
                                 // Robustly get wfoId and audioReady, handling potential type mismatches
                                 val wfoIdFromNotification = it.getStringExtra("wfoId")
-                                val isAudioReadyNotification = it.getBooleanExtra("audioReady", false) // Correctly get boolean
+                                // Read audioReady as a string and then parse it to a Boolean
+                                val audioReadyString = it.getStringExtra("audioReady")
+                                val isAudioReadyNotification = audioReadyString.equals("true", ignoreCase = true)
 
                                 Log.d("MainActivity", "AppContent LaunchedEffect received intent. Extras: ${it.extras}") // DEBUG
                                 Log.d("MainActivity", "AppContent Extracted: wfoId=$wfoIdFromNotification, audioReady=$isAudioReadyNotification") // DEBUG

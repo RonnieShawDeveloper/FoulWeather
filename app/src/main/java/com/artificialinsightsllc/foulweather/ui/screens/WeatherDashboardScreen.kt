@@ -43,7 +43,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+// REMOVED: import coil.compose.AsyncImage
+// ADDED: Glide imports
+import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
+import com.bumptech.glide.integration.compose.GlideImage
+import android.graphics.drawable.ColorDrawable // For simple placeholders/errors
+
 import com.artificialinsightsllc.foulweather.data.WeatherService
 // Explicit imports for all data models used in this file
 import com.artificialinsightsllc.foulweather.data.models.AlertFeature
@@ -98,8 +103,12 @@ import android.content.Context
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.layout.ContentScale
 import androidx.navigation.NavController // ADDED: Import NavController for navigation
 import kotlinx.coroutines.delay // ADDED: Import for coroutine delay
+import com.bumptech.glide.load.model.GlideUrl
+import com.bumptech.glide.load.model.LazyHeaders
+
 
 /**
  * Static list of NWS product types available for display.
@@ -192,7 +201,7 @@ val NWS_PRODUCT_TYPES = listOf(
  * @param onNavigateToLocationSettings Callback to navigate to the Location Setting screen.
  * @param navController The NavController used for navigation within the app.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalGlideComposeApi::class) // ADDED ExperimentalGlideComposeApi opt-in
 @Composable
 fun WeatherDashboardScreen(
     latitude: Double,
@@ -231,7 +240,8 @@ fun WeatherDashboardScreen(
 
     // State for radar GIF
     var radarStationId: String? by remember { mutableStateOf(null) }
-    var refreshRadarGifTrigger by remember { mutableStateOf(0) } // Used to force GIF reload
+    // Temporarily remove timestamp from model as per user request to focus on initial display
+    var refreshRadarGifTrigger by remember { mutableStateOf(0) } // Keep this for future refresh re-implementation
     var lastRadarUpdateTime by remember { mutableStateOf<ZonedDateTime?>(null) } // Tracks when the radar GIF was last updated
 
     // State to store the previously subscribed WFO ID for unsubscription
@@ -310,7 +320,7 @@ fun WeatherDashboardScreen(
                             firebaseService.updateUserRadarStation(userId, stationId) // Save to Firestore
                         }
                     }
-                    refreshRadarGifTrigger++ // Trigger an initial refresh for the GIF
+                    // refreshRadarGifTrigger++ // Do not trigger refresh for now
                     lastRadarUpdateTime = ZonedDateTime.now() // Set initial update time
 
                     // Step 2: If gridpoint data is successful, fetch daily forecast (full response)
@@ -357,11 +367,12 @@ fun WeatherDashboardScreen(
     }
 
     // NEW: LaunchedEffect to auto-refresh the radar GIF every 5 minutes
+    // Re-enabling the refresh mechanism
     LaunchedEffect(radarStationId) { // Re-launch if radar station changes
         if (radarStationId != null) {
             while (true) {
                 delay(5 * 60 * 1000L) // Delay for 5 minutes (5 * 60 seconds * 1000 milliseconds)
-                refreshRadarGifTrigger++ // Increment to force AsyncImage to reload
+                refreshRadarGifTrigger++ // Increment to force GlideImage to reload
                 lastRadarUpdateTime = ZonedDateTime.now() // Update timestamp
                 Log.d("WeatherDashboard", "Radar GIF auto-refresh triggered.")
             }
@@ -550,7 +561,8 @@ fun WeatherDashboardScreen(
                                     firebaseService.updateUserRadarStation(userId, stationId)
                                 }
                             }
-                            refreshRadarGifTrigger++ // Trigger refresh on retry
+                            // Re-enable refresh on retry
+                            refreshRadarGifTrigger++
                             lastRadarUpdateTime = ZonedDateTime.now() // Update time on retry
 
                             dailyForecastResponse = weatherService.getDailyForecast(gridData.forecast)
@@ -618,10 +630,20 @@ fun WeatherDashboardScreen(
                         )
 
                         val largeIconUrl = currentPeriod.icon.replace("?size=medium", "?size=large")
-                        AsyncImage(
-                            model = largeIconUrl,
+                        GlideImage( // Replaced AsyncImage with GlideImage
+                            model = GlideUrl(
+                                largeIconUrl,
+                                LazyHeaders.Builder()
+                                    .addHeader("User-Agent", "FoulWeatherApp (rdspromo@gmail.com)")
+                                    .build()
+                            ),
                             contentDescription = currentPeriod.shortForecast,
-                            modifier = Modifier.size(screenWidth / 2)
+                            modifier = Modifier.size(screenWidth / 2),
+                            requestBuilderTransform = {
+                                // Add placeholder and error for main icon
+                                it.placeholder(ColorDrawable(android.graphics.Color.GRAY))
+                                    .error(ColorDrawable(android.graphics.Color.RED))
+                            }
                         )
                         Text(
                             text = "${currentPeriod.temperature}°${currentPeriod.temperatureUnit}",
@@ -706,20 +728,30 @@ fun WeatherDashboardScreen(
                             .align(Alignment.Start)
                             .padding(vertical = 8.dp)
                     )
-                    AsyncImage(
-                        model = radarGifUrl + "?timestamp=${refreshRadarGifTrigger}", // Append timestamp to force reload
+                    GlideImage(
+                        model = GlideUrl(
+                            radarGifUrl + "?timestamp=${refreshRadarGifTrigger}", // Added timestamp back for refresh
+                            LazyHeaders.Builder()
+                                .addHeader("User-Agent", "FoulWeatherApp (rdspromo@gmail.com)")
+                                .build()
+                        ),
                         contentDescription = "Local Radar Loop",
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(screenWidth), // Make it square to fit common radar imagery
-                        contentScale = androidx.compose.ui.layout.ContentScale.Fit // As per your current setting
+                            .height(screenWidth),
+                        contentScale = ContentScale.Fit,
+                        requestBuilderTransform = {
+                            it
+                                .placeholder(ColorDrawable(android.graphics.Color.DKGRAY))
+                                .error(ColorDrawable(android.graphics.Color.RED))
+                        }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     // Text indicating last update time and auto-refresh
                     lastRadarUpdateTime?.let {
                         val formatter = DateTimeFormatter.ofPattern("MMM dd,yyyy h:mm:ss a", Locale.getDefault())
                         Text(
-                            text = "Last updated: ${it.format(formatter)} (Auto-refreshing every 5 minutes)",
+                            text = "Last updated: ${it.format(formatter)} (Auto-refreshing every 5 minutes)", // Updated text
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.LightGray,
                             textAlign = TextAlign.Center,
@@ -877,57 +909,6 @@ fun WeatherDashboardScreen(
         )
     }
 
-    // This dialog is no longer directly triggered by the FAB, as navigation handles it.
-    // However, keeping it for now if there are other triggers in future.
-    /*
-    if (showSarcasticSummaryDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                showSarcasticSummaryDialog = false
-                mediaPlayer?.release()
-                mediaPlayer = null
-                Log.d("WeatherDashboard", "Sarcastic Summary Dialog dismissed. MediaPlayer released.")
-            },
-            title = {
-                Text(
-                    text = "Your Foul Weather Summary",
-                    color = Color.White,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    if (isSarcasticSummaryLoading) {
-                        CircularProgressIndicator(modifier = Modifier.padding(16.dp))
-                        Text("Generating audio summary...", color = Color.White, textAlign = TextAlign.Center)
-                    } else if (sarcasticSummaryAudio != null) {
-                        Text("Playing summary audio...", color = Color.White, textAlign = TextAlign.Center)
-                    } else {
-                        Text("Failed to generate or play audio summary.", color = Color.Red, textAlign = TextAlign.Center)
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showSarcasticSummaryDialog = false
-                    mediaPlayer?.release()
-                    mediaPlayer = null
-                    Log.d("WeatherDashboard", "Sarcastic Summary Dialog confirmed. MediaPlayer released.")
-                }) {
-                    Text("Close", color = Color.White)
-                }
-            },
-            containerColor = Color.Black
-        )
-    }
-    */
-
-
     selectedDailyForecastPeriod?.let { period ->
         if (showDailyForecastDetailDialog) {
             AlertDialog(
@@ -947,10 +928,20 @@ fun WeatherDashboardScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         val largeIconUrl = period.icon.replace("?size=medium", "?size=large")
-                        AsyncImage(
-                            model = largeIconUrl,
+                        GlideImage( // Replaced AsyncImage with GlideImage
+                            model = GlideUrl(
+                                largeIconUrl,
+                                LazyHeaders.Builder()
+                                    .addHeader("User-Agent", "FoulWeatherApp (rdspromo@gmail.com)")
+                                    .build()
+                            ),
                             contentDescription = period.shortForecast,
-                            modifier = Modifier.size(screenWidth / 2)
+                            modifier = Modifier.size(screenWidth / 2),
+                            requestBuilderTransform = {
+                                // Add placeholder and error for detailed daily forecast icon
+                                it.placeholder(ColorDrawable(android.graphics.Color.GRAY))
+                                    .error(ColorDrawable(android.graphics.Color.RED))
+                            }
                         )
 
                         Text(
@@ -968,7 +959,7 @@ fun WeatherDashboardScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             CurrentConditionCard(
-                                emoji = "💨",
+                                emoji = "�",
                                 label = "WIND",
                                 value = "${period.windSpeed} ${period.windDirection}"
                             )
@@ -1046,6 +1037,7 @@ fun CurrentConditionCard(emoji: String, label: String, value: String) {
  *
  * @param hourlyPeriod The HourlyPeriod data object to display.
  */
+@OptIn(ExperimentalGlideComposeApi::class) // Added OptIn
 @Composable
 fun HourlyForecastCard(hourlyPeriod: HourlyPeriod) {
     val timeFormatter = DateTimeFormatter.ofPattern("h a", Locale.getDefault())
@@ -1065,10 +1057,20 @@ fun HourlyForecastCard(hourlyPeriod: HourlyPeriod) {
             verticalArrangement = Arrangement.SpaceAround
         ) {
             Text(text = zonedDateTime.format(timeFormatter), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            AsyncImage(
-                model = hourlyPeriod.icon,
+            GlideImage( // Replaced AsyncImage with GlideImage
+                model = GlideUrl(
+                    hourlyPeriod.icon,
+                    LazyHeaders.Builder()
+                        .addHeader("User-Agent", "FoulWeatherApp (rdspromo@gmail.com)")
+                        .build()
+                ),
                 contentDescription = hourlyPeriod.shortForecast,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(40.dp),
+                requestBuilderTransform = {
+                    // Add placeholder and error for hourly icon
+                    it.placeholder(ColorDrawable(android.graphics.Color.LTGRAY))
+                        .error(ColorDrawable(android.graphics.Color.RED))
+                }
             )
             Text(text = "${hourlyPeriod.temperature}°${hourlyPeriod.temperatureUnit}", fontSize = 16.sp)
             hourlyPeriod.probabilityOfPrecipitation.value?.let { pop ->
@@ -1085,6 +1087,7 @@ fun HourlyForecastCard(hourlyPeriod: HourlyPeriod) {
  * @param period The Period data object to display.
  * @param onClick Lambda function to be invoked when the card is clicked.
  */
+@OptIn(ExperimentalGlideComposeApi::class) // Added OptIn
 @Composable
 fun DailyForecastCard(period: Period, onClick: (Period) -> Unit) {
     val dateFormatter = DateTimeFormatter.ofPattern("EEE, MMM dd", Locale.getDefault())
@@ -1112,10 +1115,20 @@ fun DailyForecastCard(period: Period, onClick: (Period) -> Unit) {
                 Text(text = period.shortForecast, fontSize = 14.sp, color = Color.Gray)
             }
             Spacer(modifier = Modifier.width(8.dp))
-            AsyncImage(
-                model = period.icon,
+            GlideImage( // Replaced AsyncImage with GlideImage
+                model = GlideUrl(
+                    period.icon,
+                    LazyHeaders.Builder()
+                        .addHeader("User-Agent", "FoulWeatherApp (rdspromo@gmail.com)")
+                        .build()
+                ),
                 contentDescription = period.shortForecast,
-                modifier = Modifier.size(50.dp)
+                modifier = Modifier.size(50.dp),
+                requestBuilderTransform = {
+                    // Add placeholder and error for daily icon
+                    it.placeholder(ColorDrawable(android.graphics.Color.LTGRAY))
+                        .error(ColorDrawable(android.graphics.Color.RED))
+                }
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(

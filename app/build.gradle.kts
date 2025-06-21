@@ -42,7 +42,7 @@ android {
     }
     buildFeatures {
         compose = true
-        buildConfig = true // ADDED: This line ensures BuildConfig.java is generated
+        buildConfig = true
     }
     packaging {
         resources {
@@ -70,9 +70,11 @@ dependencies {
     // Navigation for Compose
     implementation("androidx.navigation:navigation-compose:2.8.0-beta01")
 
-    // Coil for image loading
-    implementation("io.coil-kt:coil-compose:2.6.0")
-    implementation("io.coil-kt:coil-gif:2.6.0")
+    // Glide for image loading (replacing Coil)
+    implementation("com.github.bumptech.glide:glide:4.16.0")
+    kapt("com.github.bumptech.glide:compiler:4.16.0")
+    implementation("com.github.bumptech.glide:compose:1.0.0-beta01") // For Glide with Compose
+    implementation("com.github.bumptech.glide:okhttp3-integration:4.16.0")
 
     // OkHttp for network requests
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
@@ -96,13 +98,11 @@ dependencies {
     // Firebase Remote Config
     implementation("com.google.firebase:firebase-config-ktx")
 
-
     // Google Play Services Location (for Geocoding via Android's Geocoder or other location services)
-    implementation("com.google.android.gms:play-services-location:21.2.0") // Using a recent stable version
+    implementation("com.google.android.gms:play-services-location:21.2.0")
 
     // Material3 Extended Icon set
     implementation("androidx.compose.material:material-icons-extended")
-
 
     // Testing dependencies
     testImplementation(libs.junit)

@@ -45,8 +45,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage // Import AsyncImage for loading images from URL
-import coil.request.ImageRequest // Import ImageRequest for specifying image loading options
+// REMOVED: import coil.compose.AsyncImage
+// REMOVED: import coil.request.ImageRequest
+// ADDED: Glide imports
+import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
+import com.bumptech.glide.integration.compose.GlideImage
+
 import com.artificialinsightsllc.foulweather.R
 import com.artificialinsightsllc.foulweather.ui.theme.FoulWeatherTheme
 import com.google.firebase.ktx.Firebase
@@ -65,7 +69,7 @@ import java.io.File
  * for which to fetch and play the audio summary.
  * @param onNavigateToDashboard Callback to navigate back to the dashboard or appropriate main screen.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalGlideComposeApi::class) // ADDED ExperimentalGlideComposeApi opt-in
 @Composable
 fun SarcasticSummaryPlayerScreen(
     wfoIdentifier: String?,
@@ -146,11 +150,11 @@ fun SarcasticSummaryPlayerScreen(
                     audioPlaybackState = AudioPlaybackState.Generating // Set state to generating
                     showAudioGeneratingDialog = true // Show the specific dialog
                 } else {
-                    Log.e("SummaryPlayer", "Storage error downloading or playing audio: ${e.message}", e)
+                    Log.e("Summary Player", "Storage error downloading or playing audio: ${e.message}", e)
                     audioPlaybackState = AudioPlaybackState.Error("Failed to load audio: ${e.localizedMessage ?: "Unknown storage error"}")
                 }
             } catch (e: Exception) {
-                Log.e("SummaryPlayer", "General error downloading or playing audio: ${e.message}", e)
+                Log.e("Summary Player", "General error downloading or playing audio: ${e.message}", e)
                 audioPlaybackState = AudioPlaybackState.Error("Failed to load audio: ${e.localizedMessage ?: "Unknown error"}")
             }
         }
@@ -185,18 +189,12 @@ fun SarcasticSummaryPlayerScreen(
                 .fillMaxSize() // Fills the whole screen, including under the top bar
                 .background(Color.Black) // Base background color
         ) {
-            // Background Image using Coil's AsyncImage, now filling the entire Box
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(githubBackgroundImageUrl) // The URL to load the image from
-                    .crossfade(true) // Optional: Adds a fade animation when the image loads
-                    .error(R.drawable.audio_background) // Corrected: Pass resource ID directly for fallback
-                    .placeholder(R.drawable.audio_background) // Corrected: Pass resource ID directly for placeholder
-                    .build(),
+            // Background Image using Glide's GlideImage
+            GlideImage(
+                model = githubBackgroundImageUrl, // The URL to load the image from
                 contentDescription = null, // Decorative image, no content description needed
-                modifier = Modifier.fillMaxWidth().align(Alignment.Center), // Changed to fillMaxWidth() and added align(Alignment.Center)
-                contentScale = ContentScale.FillWidth, // Changed to FillWidth to scale width and allow vertical cropping
-                // alignment is now handled by .align() modifier on the AsyncImage
+                modifier = Modifier.fillMaxWidth().align(Alignment.Center),
+                contentScale = ContentScale.FillWidth // Scale width and allow vertical cropping
             )
 
             // Original content column, placed on top of the image, still respecting Scaffold padding
@@ -205,7 +203,6 @@ fun SarcasticSummaryPlayerScreen(
                     .fillMaxSize() // Make the Column fill the entire Box
                     .padding(paddingValues) // Apply padding from scaffold to push content below top bar
                     .padding(16.dp), // Add padding to avoid content being too close to edges
-                // Removed .background(Color.Black.copy(alpha = 0.7f)) as requested
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
