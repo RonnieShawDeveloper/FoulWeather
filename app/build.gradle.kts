@@ -42,6 +42,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true // ADDED: This line ensures BuildConfig.java is generated
     }
     packaging {
         resources {
@@ -86,14 +87,17 @@ dependencies {
     // Firebase Firestore
     implementation("com.google.firebase:firebase-firestore-ktx")
 
-    // Firebase Cloud Messaging (FCM) - ADDED THIS LINE
+    // Firebase Cloud Messaging (FCM)
     implementation ("com.google.firebase:firebase-messaging-ktx")
 
     // Firebase Storage
     implementation("com.google.firebase:firebase-storage-ktx")
 
+    // Firebase Remote Config
+    implementation("com.google.firebase:firebase-config-ktx")
 
-    // Google Play Services Location (for Geocoding via Android's Geocoder or other location services) - ADDED THIS LINE
+
+    // Google Play Services Location (for Geocoding via Android's Geocoder or other location services)
     implementation("com.google.android.gms:play-services-location:21.2.0") // Using a recent stable version
 
     // Material3 Extended Icon set

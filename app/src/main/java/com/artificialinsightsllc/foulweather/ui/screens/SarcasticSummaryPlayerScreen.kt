@@ -1,10 +1,10 @@
-// app/src/main/java/com/artificialinsightsllc/foulweather/ui/screens/SarcasticSummaryPlayerScreen.kt
 package com.artificialinsightsllc.foulweather.ui.screens
 
 import android.media.MediaPlayer
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,6 +25,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -38,26 +39,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage // Import AsyncImage for loading images from URL
+import coil.request.ImageRequest // Import ImageRequest for specifying image loading options
+import com.artificialinsightsllc.foulweather.R
 import com.artificialinsightsllc.foulweather.ui.theme.FoulWeatherTheme
 import com.google.firebase.ktx.Firebase
-import com.google.firebase.storage.ktx.storage
 import com.google.firebase.storage.StorageException
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
+import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.io.File
-import java.io.FileOutputStream
-import androidx.compose.foundation.Image
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import com.artificialinsightsllc.foulweather.R
-
 
 /**
  * Composable for playing pre-generated sarcastic weather summaries from Firebase Storage.
@@ -72,7 +70,6 @@ import com.artificialinsightsllc.foulweather.R
 fun SarcasticSummaryPlayerScreen(
     wfoIdentifier: String?,
     onNavigateToDashboard: () -> Unit
-    // Removed firebaseService parameter
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -84,6 +81,9 @@ fun SarcasticSummaryPlayerScreen(
 
     // State to control visibility of the "Audio Generating" dialog
     var showAudioGeneratingDialog by remember { mutableStateOf(false) }
+
+    // URL for the GitHub background image
+    val githubBackgroundImageUrl = "https://raw.githubusercontent.com/RonnieShawDeveloper/FoulWeatherPublic/main/audio_background.png"
 
     // DisposableEffect for MediaPlayer lifecycle management
     DisposableEffect(Unit) {
@@ -177,40 +177,47 @@ fun SarcasticSummaryPlayerScreen(
             )
         }
     ) { paddingValues ->
-        // Use a Box to layer the background image and the content column
-        androidx.compose.foundation.layout.Box(
+        // This Box will now contain the background image and the content layered on top.
+        // It should fill the entire size provided by the Scaffold, allowing the image to go
+        // under the top app bar.
+        Box(
             modifier = Modifier
-                .fillMaxSize() // Make the Box fill available space
-                .padding(paddingValues) // Apply padding from scaffold
-                .background(Color.Black) // Ensure the entire background is black for blending
+                .fillMaxSize() // Fills the whole screen, including under the top bar
+                .background(Color.Black) // Base background color
         ) {
-            // Background Image
-            Image(
-                painter = painterResource(id = R.drawable.audio_background), // Set your background image
+            // Background Image using Coil's AsyncImage, now filling the entire Box
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(githubBackgroundImageUrl) // The URL to load the image from
+                    .crossfade(true) // Optional: Adds a fade animation when the image loads
+                    .error(R.drawable.audio_background) // Corrected: Pass resource ID directly for fallback
+                    .placeholder(R.drawable.audio_background) // Corrected: Pass resource ID directly for placeholder
+                    .build(),
                 contentDescription = null, // Decorative image, no content description needed
-                modifier = Modifier.fillMaxWidth(), // Fill the entire width of the Box
-                contentScale = ContentScale.FillWidth, // Scale to fill width, maintaining aspect ratio
-                alignment = Alignment.Center // Center the image horizontally
+                modifier = Modifier.fillMaxWidth().align(Alignment.Center), // Changed to fillMaxWidth() and added align(Alignment.Center)
+                contentScale = ContentScale.FillWidth, // Changed to FillWidth to scale width and allow vertical cropping
+                // alignment is now handled by .align() modifier on the AsyncImage
             )
 
-            // Original content column, placed on top of the image
+            // Original content column, placed on top of the image, still respecting Scaffold padding
             Column(
                 modifier = Modifier
                     .fillMaxSize() // Make the Column fill the entire Box
-                    .padding(16.dp) // Add padding to avoid content being too close to edges
-                    .background(Color.Black.copy(alpha = 0.7f)), // ADDED: Semi-transparent black background
+                    .padding(paddingValues) // Apply padding from scaffold to push content below top bar
+                    .padding(16.dp), // Add padding to avoid content being too close to edges
+                // Removed .background(Color.Black.copy(alpha = 0.7f)) as requested
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 when (audioPlaybackState) {
                     AudioPlaybackState.Loading -> {
                         CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text("Loading and playing audio...", color = Color.White)
                     }
                     AudioPlaybackState.Playing -> {
                         Text("Playing summary...", color = Color.White)
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         // Basic playback controls (optional, given short summaries)
                         Row(horizontalArrangement = Arrangement.Center) {
                             Button(onClick = { mediaPlayer?.pause(); audioPlaybackState = AudioPlaybackState.Paused }) {
@@ -224,7 +231,7 @@ fun SarcasticSummaryPlayerScreen(
                     }
                     AudioPlaybackState.Paused -> {
                         Text("Paused.", color = Color.White)
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Row(horizontalArrangement = Arrangement.Center) {
                             Button(onClick = { mediaPlayer?.start(); audioPlaybackState = AudioPlaybackState.Playing }) {
                                 Text("Resume")
@@ -237,7 +244,7 @@ fun SarcasticSummaryPlayerScreen(
                     }
                     AudioPlaybackState.Idle -> {
                         Text("Summary ready. Press play to listen.", color = Color.White)
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Button(onClick = {
                             mediaPlayer?.apply {
                                 if (!isPlaying) {
@@ -265,14 +272,14 @@ fun SarcasticSummaryPlayerScreen(
                     }
                     AudioPlaybackState.Generating -> {
                         CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Audio summary is being generated...", color = Color.White)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("You will receive a notification when it's available.", color = Color.White, textAlign = TextAlign.Center)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Your Rant is being generated...", color = Color.White)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("You will receive a notification shortly", color = Color.White, textAlign = TextAlign.Center)
                     }
                     is AudioPlaybackState.Error -> {
                         Text("Error: ${audioPlaybackState.message}", color = MaterialTheme.colorScheme.error)
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Button(onClick = onNavigateToDashboard) {
                             Text("Go Back")
                         }
@@ -344,7 +351,6 @@ sealed class AudioPlaybackState(val message: String? = null) {
 @Composable
 fun PreviewSarcasticSummaryPlayerScreen() {
     FoulWeatherTheme {
-        // No FirebaseService needed for preview due to simplified callback
         SarcasticSummaryPlayerScreen(
             wfoIdentifier = "TBW",
             onNavigateToDashboard = { Log.d("Preview", "Navigating to dashboard (simplified)") }
